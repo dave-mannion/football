@@ -226,7 +226,8 @@ def extract_match_data(html_content):
 # --- START OF SCRIPT EXECUTION ---
 if __name__ == "__main__":
     print("Starting data extraction from HTML files...")
-    path = "data/football_lineups/downloaded_lineup_html_files/"
+    # path = "data/football_lineups/downloaded_lineup_html_files/"
+    path = "data/football_lineups/test_html_files/"
     for filename in glob.glob(os.path.join(path, '*.html')): #only process .JSON files in folder. 
         match_code = filename.split("/")[-1].replace("match_data_", "").replace(".html", "")
         try:
@@ -239,9 +240,10 @@ if __name__ == "__main__":
         extracted_info = extract_match_data(html_file_content)
 
         if extracted_info:
-            with open(f'data/football_lineups/extracted_json_files/extracted_match_data_{match_code}.json', 'w') as f:
+            new_filename = f'data/football_lineups/extracted_json_files/extracted_match_data_{match_code}.json'
+            with open(new_filename, 'w') as f:
                 json.dump(extracted_info, f)
             f.close()
-            print(f'Data sucessfully extracted to {filename}')
+            print(f'Data sucessfully extracted to {new_filename}')
         else:
             print("Failed to extract data.")
