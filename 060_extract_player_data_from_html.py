@@ -6,7 +6,7 @@ from utils import get_current_time
 
 def extract_player_data(html_content: str) -> dict:
     """
-    Extracts a player's name, date of birth, height, nationality, and play style from an HTML file.
+    Extracts player information from an HTML file.
 
     The function is designed to be robust and handle cases where some information
     might be missing in the HTML structure.
@@ -17,7 +17,8 @@ def extract_player_data(html_content: str) -> dict:
     Returns:
         A dictionary with the extracted information:
         {
-            'name': 'Player Name',
+            'short_name': 'Common Name',
+            'full_name': 'Full Legal Name',
             'date_of_birth': 'DD-Mon-YY',
             'height': 'X.XX m',
             'nationality': 'Country',
@@ -28,21 +29,26 @@ def extract_player_data(html_content: str) -> dict:
     soup = BeautifulSoup(html_content, 'html.parser')
     
     player_info = {
-        'name': None,
+        'short_name': None,
+        'full_name': None,
         'date_of_birth': None,
         'height': None,
         'nationality': None,
         'play_style': None,
     }
 
-    # --- 1. Extract Full Name ---
-    # The full name is located as a text node right after the <h1> tag.
+    # --- 1. Extract Names ---
     try:
         h1_tag = soup.find('h1', id='page-title')
         if h1_tag:
-            player_info['name'] = h1_tag.next_sibling.strip()
+            # The short name is the main text content of the H1 tag itself.
+            player_info['short_name'] = h1_tag.get_text(strip=True)
+            
+            # The full name is the text node immediately following the H1 tag.
+            if h1_tag.next_sibling and isinstance(h1_tag.next_sibling, str):
+                player_info['full_name'] = h1_tag.next_sibling.strip()
     except AttributeError:
-        print("Warning: Could not extract player's full name.")
+        print("Warning: Could not extract player names.")
 
     # --- 2. Extract Date of Birth ---
     # The DOB is in a table row, identified by a 'cake' icon.
@@ -78,7 +84,6 @@ def extract_player_data(html_content: str) -> dict:
     # --- 5. Extract Play Style ---
     # Found inside a <font> tag near the top of the player info section.
     try:
-        # This specific font tag seems to consistently hold the play style
         style_font_tag = soup.find('font', attrs={'color': '#1111FF'})
         if style_font_tag:
             player_info['play_style'] = style_font_tag.get_text(strip=True)
