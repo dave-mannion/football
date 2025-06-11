@@ -3,8 +3,8 @@ import time
 import glob
 import os
 import random
-from scrapingbee import ScrapingBeeClient
-import datetime
+
+from utils import get_current_time, get_scrapingbee_response, read_text_file_to_list
 
 # 020_download_match_html.py
 # This script downloads match HTML files from the Football Lineups website based on match codes.
@@ -17,21 +17,6 @@ def create_match_url(match_code):
     """
     return f"https://m.football-lineups.com/match/{match_code}/"
 
-def read_text_file_to_list(filepath):
-    """
-    Read a text file and return its contents as a list.
-    Each line in the file becomes an element in the list.
-    """
-    with open(filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    f.close()
-    return [line.strip() for line in lines]
-
-def get_current_time():
-    """
-    Get the current time in a formatted string.
-    """
-    return datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y")
 
 def download_match_html(urls,time_delay=20):
 
@@ -39,17 +24,10 @@ def download_match_html(urls,time_delay=20):
         print(f"{get_current_time()} No URLs to download. Exiting.")
         return None
 
-    API_KEY = 'TAKN8UIR1O36S12TWBADOT7ULZPBQ23YR9YB7REMVFWLS833MF4B79RBRQC6AEXDOJZXB2C45KB8CILN' 
-    client = ScrapingBeeClient(api_key=API_KEY)
-
     print(f'{get_current_time()} Downloading Match HTML Files...')
 
     for url in urls:
-        print(f"{get_current_time()} Processing URL: {url}")
-        response = client.get(url,params={
-        'premium_proxy': 'True',
-        'render_js':'False'
-        })
+        response = get_scrapingbee_response(url)
 
         match_code = url.split("/")[-2]  # Extract match code from URL
 
@@ -110,4 +88,4 @@ urls = [create_match_url(code) for code in match_codes_to_be_downloaded]
 
 print(f'Downloading from {len(urls)} URLs...')
 
-download_match_html(urls, time_delay=15)
+download_match_html(urls, time_delay=5)

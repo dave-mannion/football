@@ -5,6 +5,8 @@ import re
 import json
 import glob
 import os
+from utils import get_current_time
+
 
 # Helper function to parse lineup and substitute tables for a team
 def parse_lineup_tables(team_lineup_h1_tag, team_name_key, lineups_dict):
@@ -281,12 +283,18 @@ def extract_match_data(html_content):
 
     return data
 
+# def get_current_time():
+#     """
+#     Get the current time in a formatted string.
+#     """
+#     return datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y")
 
 # --- START OF SCRIPT EXECUTION ---
+
 if __name__ == "__main__":
-    print("Starting data extraction from HTML files...")
-    # path = "data/football_lineups/downloaded_lineup_html_files/"
-    path = "data/football_lineups/test_html_files/"
+    print(f"{get_current_time()} Starting data extraction from HTML files...")
+    path = "data/football_lineups/downloaded_lineup_html_files/"
+    failed_to_extract_match_codes = []
     for filename in glob.glob(os.path.join(path, '*.html')): #only process .JSON files in folder. 
         match_code = filename.split("/")[-1].replace("match_data_", "").replace(".html", "")
         try:
@@ -299,10 +307,14 @@ if __name__ == "__main__":
         extracted_info = extract_match_data(html_file_content)
 
         if extracted_info:
-            new_filename = f'data/football_lineups/extracted_json_files/extracted_match_data_{match_code}.json'
+            new_filename = f'data/football_lineups/extracted_match_json_files/extracted_match_data_{match_code}.json'
             with open(new_filename, 'w') as f:
                 json.dump(extracted_info, f, indent=4)
             f.close()
-            print(f'Data sucessfully extracted to {new_filename}')
+            # print(f'{get_current_time()} Data sucessfully extracted to {new_filename}')
         else:
-            print("Failed to extract data.")
+            print(f"{get_current_time()} Failed to extract data.")
+            failed_to_extract_match_codes.append(match_code)
+    if len(failed_to_extract_match_codes) > 0:
+        print('Failed Match Codes:',failed_to_extract_match_codes)    
+    print(f"{get_current_time()} Finished data extraction from HTML files...\n")
