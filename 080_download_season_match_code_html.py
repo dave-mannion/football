@@ -52,12 +52,12 @@ def download_season_html(urls,time_delay=20):
             with open(f"data/football_lineups/season_match_code_html_files/{league_and_year}.html", "w", encoding="utf-8") as file:
                 file.write(response.text)
                 file.close()
-            print(f"HTML for match {league_and_year} saved successfully.\n")
+            print(f"{get_current_time} HTML for match {league_and_year} saved successfully.\n")
         else:
-            print(f"Failed to retrieve the page. Status code: {response.status_code}")
+            print(f"{get_current_time} Failed to retrieve the page. Status code: {response.status_code}")
         print(f"Waiting for {time_delay} seconds before the next request...")
 
-        randomised_time_delay = random.randint(time_delay-2, time_delay+2)  # Random delay between 10 and 30 seconds
+        randomised_time_delay = random.randint(time_delay-1, time_delay+1)  # Random delay between 10 and 30 seconds
         print(f"Next request will be delayed by {randomised_time_delay} seconds.")
         time.sleep(randomised_time_delay)  
 
@@ -65,4 +65,4 @@ def download_season_html(urls,time_delay=20):
 
 urls = [create_season_match_code_html_url(league_name, year) for league_name in league_names for year in years]
 
-download_season_html(urls=urls, time_delay=5)
+download_season_html(urls=urls, time_delay=3)
