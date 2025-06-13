@@ -46,8 +46,14 @@ def extract_match_info_from_json():
             exit()
 
     match_info_df = pd.DataFrame.from_dict(all_match_info)
+
+    match_info_df['home_win']=np.where(match_info_df['home_score']>match_info_df['away_score'],1,0)
+    match_info_df['draw']=np.where(match_info_df['home_score']==match_info_df['away_score'],1,0)
+    match_info_df['away_win']=np.where(match_info_df['home_score']<match_info_df['away_score'],1,0)
+
     filepath = 'data/football_lineups/matches_dataset/matches_dataset.csv'
     match_info_df.to_csv(filepath,index=False)
     print(f'{get_current_time()} Match Dataset written to {filepath}')
+
 
 extract_match_info_from_json()
