@@ -30,6 +30,10 @@ def merge_matches_and_players():
     for col in starter_cols:
         matches_dataset[f'{col}_fifa_version']=matches_dataset[col].astype(int).astype(str) + '_' + matches_dataset['fifa_version'].astype(int).astype(str)
 
+
+    
+
+
     new_filepath = filepath.replace('merged_fifa_and_fl_players','merged_players_and_matches')
     matches_dataset.to_csv(new_filepath,index=False)
     print(f'{get_current_time()} Match and player attribute dataset written to {new_filepath}')
