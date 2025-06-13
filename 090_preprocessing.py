@@ -270,6 +270,8 @@ country_names = {
     'MON': 'Monaco'
 }
 
+
+
 def prepare_medium_fm_data(fm_filepath):
     """
     
@@ -277,6 +279,114 @@ def prepare_medium_fm_data(fm_filepath):
     Not needed for the ones scraped myself
 
     """
+
+    data_dict = {
+        'WP Needed':'Work Permit Needed',
+        'WP Chance':'Work Permit Chance',
+        'Transfer Fees Received':'Sum of Transfer Fees Received',
+        'Ovr':'Overall Fee',
+        'Last Trans. Fee':'Last Transfer Fee',
+        'Style':'Scouts Opinion of players playing style',
+        'Pros':'Scouts Opinion of players strengths',
+        'Cons':'Scouts Opinion of players weaknesses',
+        'Yth Gls':'Number of Youth Goals',
+        'Yth Apps':'Number of Youth Appearances',
+        'Team':'International Team Squad',
+        'Caps':'Number of International Caps',
+        'Rc Injury':'Recurring Injury',
+        'SLGAB':'Seasonal Landmark Goals and Assists Bonus',
+        'SLGB':'Seasonal Landmark Goals Bonus',
+        'SLAB' :'Seasonal Landmark Assists Bonus',
+        'Expires':'Contract Expiry Date',
+        'Begins':'Contract Start Date',
+        'Style.1':'Assistant Managers Opinion of Style',
+        'No.':'Squad Number',
+        'UID':'Football Manager ID',
+        'Aer':'Aerial Reach (GK)',
+        'Cmp':'Composure',
+        'Cnt':'Concentration',
+        'Cor':'Corners',
+        'Cro':'Crossing',
+        'Dec':'Decisions',
+        'Det':'Determination',
+        'Dri':'Dribbling',
+        'Ecc':'Eccentricity',
+        'Fin':'Finishing',
+        'Fir':'First Touch',
+        'Fla':'Flair',
+        'Fre':'Free Kicks',
+        'Han':'Handling (GK)',
+        'Hea':'Heading',
+        'Jum':'Jumping Reach (GK)',
+        'Kic':'Kicking (GK)',
+        'Ldr': 'Leadership',
+        'Lon': 'Long Shots',
+        'L Th': 'Long Throws',
+        'Mar': 'Marketing',
+        'Nat.1': 'Natural Fitness',
+        'OtB': 'Off the Ball',
+        '1v1': 'One v Ones (GK)',
+        'Pac': 'Pace',
+        'Pas': 'Passing',
+        'Pen': 'Penalties',
+        'Pos': 'Positioning',
+        'Pun': 'Punching Tendancy (GK)',
+        'Ref': 'Reflexes (GK)',
+        'TRO': 'Rushing Out Tendancy (GK)',
+        'Sta': 'Stamina',
+        'Str': 'Strength',
+        'Tck': 'Tackling',
+        'Tea': 'Teamwork',
+        'Tec': 'Technique',
+        'Thr': 'Throwing (GK)',
+        'Vis': 'Vision',
+        'Wor': 'Work Rate',
+        'Com': 'Communication',
+        'Bra': 'Bravery',
+        'Bal': 'Balance',
+        'Ant': 'Anticipation',
+        'Agi': 'Agility',
+        'Agg': 'Aggression',
+        'Cmd': 'Command of theArea (GK)',
+        'Acc': 'Acceleration'
+    }
+
+    columns_to_remove = [
+        'Inf',
+        'Pick',
+        'Round',
+        'Drafted Club',
+        'Season 2027/28',
+        'Season 2026/27',
+        'Season 2025/26',
+        'Season 2024/25',
+        'Agent.1',
+        'CON', 
+        'SHP',
+        'NT Injury',
+        'Injury',
+        'Injured On',
+        'Fatigue',
+        'Morale',
+        'Long-term Plans',
+        'Waive Comp for Mgr Role',
+        'WaCLG',
+        'SLGAB.1',
+        'SLGB (Gls)',
+        'SLAB.1',
+        'Pot. Cap Impact',
+        'Cap Impact',
+        'Rel Wage Drop',
+        'Relegation Release',
+        'Prom Wage Rise',
+        '% Wages/Sponsor',
+        '% Gt. Receipts',
+        '% Comp for Mgr Role',
+        'Player Rights',
+        'Best Role.1',
+        'Best Role.2'
+        ]
+
     fm_df = pd.read_csv(fm_filepath)
 
     print(f"{get_current_time()} Preparing Football Manager data...")
@@ -294,8 +404,21 @@ def prepare_medium_fm_data(fm_filepath):
     fm_df['nationality'] = fm_df['Nat'].str.strip().replace(country_names)
     fm_df['date_of_birth_nationality']= fm_df['date_of_birth'] + '_' + fm_df['nationality']
 
+    fm_df.rename(columns=data_dict,inplace=True)
+
+    drop_cols = []
+    for c in fm_df.columns:
+        n = fm_df[c].nunique()
+
+        if n == 1:
+            drop_cols.append(c)
+
+    drop_cols += columns_to_remove
+
+    cols_to_look_at = [x for x in fm_df.columns if x not in drop_cols]
+
     new_filepath = fm_filepath.replace('.csv','_prepared.csv')
-    fm_df.to_csv(new_filepath, index=False)
+    fm_df[cols_to_look_at].to_csv(new_filepath, index=False)
     print(f"{get_current_time()} Football Manager data prepared and saved to {new_filepath}")
 
 def prepare_fifa_data():
@@ -341,16 +464,16 @@ def get_fuzz_score(row):
     overall_fuzz_score = np.maximum(full_name_fuzz_score, short_name_fuzz_score)
     return overall_fuzz_score
 
-def merge_ratings_and_fl_players(fm_filepath, fl_players_filepath):
+def merge_ratings_and_fl_players(ratings_filepath, fl_players_filepath):
     """
     Merge Football Manager and Football Lineups player data.
     """
     print(f"{get_current_time()} Merging Football Manager and Football Lineups player data...")
 
-    fm_df = pd.read_csv(fm_filepath)
+    ratings_df = pd.read_csv(ratings_filepath)
     fl_players = pd.read_csv(fl_players_filepath)
 
-    merged = pd.merge(fl_players, fm_df, left_on='date_of_birth', right_on='date_of_birth', how='left', suffixes=('_fl', '_fm'))
+    merged = pd.merge(fl_players, ratings_df, left_on='date_of_birth', right_on='date_of_birth', how='left', suffixes=('_fl', '_ratings'))
     merged['fuzz_score'] = merged.apply(get_fuzz_score, axis=1)
 
     merged.sort_values(by=['full_name','fuzz_score'], ascending=False, inplace=True)
@@ -359,9 +482,12 @@ def merge_ratings_and_fl_players(fm_filepath, fl_players_filepath):
     cutoff_score = 69
 
     # Remove players that didnt seem to be able to match 
-    merged = merged[merged['fuzz_score'] >= cutoff_score]
+    # merged = merged[merged['fuzz_score'] >= cutoff_score]
 
-    filepath = 'data/merged_datasets/merged_fm_fl_players.csv'
+    if 'fifa' in ratings_filepath:
+        filepath = 'data/merged_datasets/merged_fifa_and_fl_players.csv'
+    else:
+             filepath = 'data/merged_datasets/merged_fm_and_fl_players.csv'   
     merged.to_csv(filepath, index=False)
     print(f"{get_current_time()} Merged player data saved to {filepath}")
 
