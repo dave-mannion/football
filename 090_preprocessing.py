@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from utils import get_current_time
 from thefuzz import fuzz
+from unidecode import unidecode
 
 def rtf_file_to_csv(file_path,nlines=None):
 
@@ -429,7 +430,9 @@ def prepare_fifa_data():
     fifa_df['nationality'] = fifa_df['nationality_name']
     fifa_df['date_of_birth_nationality']= fifa_df['date_of_birth'] + '_' + fifa_df['nationality']
     # TODO: Take this out
-    fifa_df = fifa_df[fifa_df['fifa_version']==24]
+    fifa_df['long_name']=fifa_df['long_name'].apply(lambda x: unidecode(x)).str.lower()
+
+    fifa_df = fifa_df[fifa_df['fifa_version']>=19]
 
     new_filepath = fifa_filepath.replace('.csv','_prepared.csv')
     fifa_df.to_csv(new_filepath, index=False)
@@ -443,6 +446,9 @@ def prepare_football_lineups_player_data(football_lineups_players_filepath):
     fl_players = pd.read_csv(football_lineups_players_filepath)
     fl_players['date_of_birth'] = (pd.to_datetime(fl_players['date_of_birth']).dt.date).astype(str)
     fl_players['date_of_birth_nationality']= fl_players['date_of_birth'] + '_' + fl_players['nationality']
+    fl_players['long_name']=fl_players['full_name'].apply(lambda x: unidecode(x)).str.lower()
+    fl_players['short_name']=fl_players['short_name'].apply(lambda x: unidecode(x)).str.lower()
+
 
     new_filepath = football_lineups_players_filepath.replace('.csv','_prepared.csv')
     fl_players.to_csv(new_filepath, index=False)
@@ -451,9 +457,9 @@ def prepare_football_lineups_player_data(football_lineups_players_filepath):
 
 def get_fuzz_score(row):
 
-    lineupsdotcom_full_name = row['full_name']
+    lineupsdotcom_full_name = row['long_name_fl']
     lineupsdotcom_short_name = row['short_name_fl']
-    rating_name = row['long_name']
+    rating_name = row['long_name_ratings']
 
     if pd.isna(rating_name):
         return np.nan
@@ -468,7 +474,7 @@ def merge_ratings_and_fl_players(ratings_filepath, fl_players_filepath):
     """
     Merge Football Manager and Football Lineups player data.
     """
-    print(f"{get_current_time()} Merging Football Manager and Football Lineups player data...")
+    print(f"{get_current_time()} Merging Rating Data and Football Lineups player data...")
 
     ratings_df = pd.read_csv(ratings_filepath)
     fl_players = pd.read_csv(fl_players_filepath)
@@ -477,12 +483,12 @@ def merge_ratings_and_fl_players(ratings_filepath, fl_players_filepath):
     merged['fuzz_score'] = merged.apply(get_fuzz_score, axis=1)
 
     merged.sort_values(by=['full_name','fuzz_score'], ascending=False, inplace=True)
-    merged.drop_duplicates(subset='full_name', keep='first',inplace=True)
+    merged.drop_duplicates(subset=['full_name','fifa_version'], keep='first',inplace=True)
 
-    cutoff_score = 69
+    cutoff_score = 50
 
     # Remove players that didnt seem to be able to match 
-    # merged = merged[merged['fuzz_score'] >= cutoff_score]
+    merged = merged[merged['fuzz_score'] >= cutoff_score]
 
     if 'fifa' in ratings_filepath:
         filepath = 'data/merged_datasets/merged_fifa_and_fl_players.csv'
