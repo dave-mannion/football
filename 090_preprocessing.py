@@ -448,7 +448,7 @@ def prepare_football_lineups_player_data(football_lineups_players_filepath):
     fl_players['date_of_birth_nationality']= fl_players['date_of_birth'] + '_' + fl_players['nationality']
     fl_players['long_name']=fl_players['full_name'].apply(lambda x: unidecode(x)).str.lower()
     fl_players['short_name']=fl_players['short_name'].apply(lambda x: unidecode(x)).str.lower()
-
+    fl_players['id_fl']=fl_players['id']
 
     new_filepath = football_lineups_players_filepath.replace('.csv','_prepared.csv')
     fl_players.to_csv(new_filepath, index=False)
