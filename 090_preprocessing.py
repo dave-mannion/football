@@ -429,9 +429,11 @@ def prepare_fifa_data():
     fifa_df['date_of_birth'] = (pd.to_datetime(fifa_df['dob'],format='%Y-%m-%d').dt.date).astype(str)
     fifa_df['nationality'] = fifa_df['nationality_name']
     fifa_df['date_of_birth_nationality']= fifa_df['date_of_birth'] + '_' + fifa_df['nationality']
-    # TODO: Take this out
-    fifa_df['long_name']=fifa_df['long_name'].apply(lambda x: unidecode(x)).str.lower()
 
+    fifa_df['long_name']=fifa_df['long_name'].apply(lambda x: unidecode(x)).str.lower()
+    fifa_df['update_as_of'] = pd.to_datetime(fifa_df['update_as_of'],format='%Y-%m-%d')
+
+    # TODO: Take this out, or make it go back further than 2019? 
     fifa_df = fifa_df[fifa_df['fifa_version']>=19]
 
     new_filepath = fifa_filepath.replace('.csv','_prepared.csv')
@@ -484,6 +486,10 @@ def merge_ratings_and_fl_players(ratings_filepath, fl_players_filepath):
 
     merged.sort_values(by=['full_name','fuzz_score'], ascending=False, inplace=True)
     merged.drop_duplicates(subset=['full_name','fifa_version'], keep='first',inplace=True)
+
+    # TODO: Come back to this, better way of handling nulls?
+    merged.dropna(subset=['id_fl','fifa_version'],inplace=True)
+    merged['id_fl_fifa_version']= merged['id_fl'].astype(int).astype(str) + '_' + merged['fifa_version'].astype(int).astype(str)
 
     cutoff_score = 50
 
