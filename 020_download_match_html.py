@@ -27,7 +27,10 @@ def download_match_html(urls,time_delay=20):
     print(f'{get_current_time()} Downloading Match HTML Files...')
 
     for url in urls:
-        response = get_scrapingbee_response(url)
+        try:
+            response = get_scrapingbee_response(url)
+        except:
+            continue
 
         match_code = url.split("/")[-2]  # Extract match code from URL
 
@@ -37,9 +40,9 @@ def download_match_html(urls,time_delay=20):
             with open(f"data/football_lineups/downloaded_lineup_html_files/match_data_{match_code}.html", "w", encoding="utf-8") as file:
                 file.write(response.text)
                 file.close()
-            print(f"HTML for match {match_code} saved successfully.\n")
+            print(f"{get_current_time()} HTML for match {match_code} saved successfully.\n")
         else:
-            print(f"Failed to retrieve the page. Status code: {response.status_code}")
+            print(f"{get_current_time()} Failed to retrieve the page. Status code: {response.status_code}")
         print(f"Waiting for {time_delay} seconds before the next request...")
 
         randomised_time_delay = random.randint(time_delay-2, time_delay+2)  # Random delay between 10 and 30 seconds
