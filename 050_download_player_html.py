@@ -27,8 +27,12 @@ def download_player_html(urls,time_delay=20):
     print(f'{get_current_time()} Downloading player HTML Files...')
 
     for url in urls:
-        response = get_scrapingbee_response(url)
-
+        try:
+            response = get_scrapingbee_response(url)
+        except:
+            print(f"{get_current_time()} failed to download {url} due to response error")
+            continue
+        
         player_code = url.split("/")[-2]  # Extract player code from URL
 
         # Check if the request was successful
