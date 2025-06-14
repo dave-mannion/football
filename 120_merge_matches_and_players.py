@@ -18,6 +18,16 @@ def merge_matches_and_players():
     # possibly leading to worse results :( update to fifa 25! 
 
     matches_dataset = pd.read_csv('data/football_lineups/matches_dataset/matches_dataset.csv')
+
+    # Remove matches without a date that it was played
+    # 
+    matches_dataset = matches_dataset[matches_dataset['match_datetime']!='Unknown']
+
+    # Remove games which have a player without an id playing. 
+    # TODO: Make this better, but currently only 10/16000 games
+    starter_cols = [x for x in matches_dataset.columns if 'starter' in x]
+    matches_dataset.dropna(subset=starter_cols,inplace=True)
+
     matches_dataset['match_datetime']=pd.to_datetime(matches_dataset['match_datetime'])
     conditions = [matches_dataset['match_datetime'] >= x for x in fifa_version_dict.values()]
     choices = [x for x in fifa_version_dict.keys()]
@@ -28,11 +38,7 @@ def merge_matches_and_players():
 
     starter_cols = [x for x in matches_dataset.filter(regex='starter_id').columns]
     for col in starter_cols:
-        matches_dataset[f'{col}_fifa_version']=matches_dataset[col].astype(int).astype(str) + '_' + matches_dataset['fifa_version'].astype(int).astype(str)
-
-
-    
-
+        matches_dataset[f'{col}_fifa_version']=matches_dataset[col].astype(int,errors='ignore').astype(str) + '_' + matches_dataset['fifa_version'].astype(int).astype(str)
 
     new_filepath = filepath.replace('merged_fifa_and_fl_players','merged_players_and_matches')
     matches_dataset.to_csv(new_filepath,index=False)
