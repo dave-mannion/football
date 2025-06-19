@@ -45,7 +45,7 @@ def download_match_html(urls,time_delay=20):
             print(f"{get_current_time()} Failed to retrieve the page. Status code: {response.status_code}")
         print(f"Waiting for {time_delay} seconds before the next request...")
 
-        randomised_time_delay = random.randint(time_delay-2, time_delay+2)  # Random delay between 10 and 30 seconds
+        randomised_time_delay = random.randint(time_delay-1, time_delay+1)  # Random delay between 10 and 30 seconds
         print(f"Next request will be delayed by {randomised_time_delay} seconds.")
         time.sleep(randomised_time_delay)  
 
