@@ -283,11 +283,7 @@ def extract_match_data(html_content):
 
     return data
 
-# def get_current_time():
-#     """
-#     Get the current time in a formatted string.
-#     """
-#     return datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y")
+
 
 # --- START OF SCRIPT EXECUTION ---
 
