@@ -1,17 +1,10 @@
 import re
 import os
 import glob
+from utils import write_list_to_text_file
+
 
 filepath = 'data/football_lineups/season_match_code_html_files/'
-
-def write_list_to_text_file(list, filepath):
-    with open(filepath, 'w+') as f:
-        for line in list:
-            f.write(f"{line}\n")
-
-    f.close()
-
-    print(f"List of length {len(list)} written to {filepath} successfully.")
 
 def extract_match_codes(filepath):
     for filename in glob.glob(os.path.join(filepath, '*.html')): #only process .JSON files in folder. 

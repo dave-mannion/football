@@ -1,13 +1,17 @@
+
+
 from bs4 import BeautifulSoup
 import re
 import json
 import glob
 import os
+from utils import get_current_time
+
 
 # Helper function to parse lineup and substitute tables for a team
 def parse_lineup_tables(team_lineup_h1_tag, team_name_key, lineups_dict):
     """
-    Parses starters and substitutes for a given team.
+    Parses starters, substitutes, and coach for a given team.
     Modifies lineups_dict directly.
     """
     if not team_lineup_h1_tag:
@@ -25,7 +29,14 @@ def parse_lineup_tables(team_lineup_h1_tag, team_name_key, lineups_dict):
             if len(cells) >= 2:
                 number = cells[0].get_text(strip=True)
                 player_name_tag = cells[1].find('a')
-                player_name = player_name_tag.get_text(strip=True) if player_name_tag else "Unknown Player"
+                player_name = "Unknown Player"
+                player_id = "Unknown"
+                if player_name_tag:
+                    player_name = player_name_tag.get_text(strip=True)
+                    href = player_name_tag.get('href', '')
+                    id_match = re.search(r'/footballer/(\d+)', href)
+                    if id_match:
+                        player_id = id_match.group(1)
                 
                 sub_off_time = None
                 if len(cells) > 2 and cells[2].get_text(strip=True) and "'" in cells[2].get_text(strip=True): # Substituted off
@@ -34,6 +45,7 @@ def parse_lineup_tables(team_lineup_h1_tag, team_name_key, lineups_dict):
                 lineups_dict[team_name_key]['starters'].append({
                     "number": number,
                     "name": player_name,
+                    "id": player_id,
                     "sub_off_at": sub_off_time
                 })
     else:
@@ -47,14 +59,35 @@ def parse_lineup_tables(team_lineup_h1_tag, team_name_key, lineups_dict):
                 if sub_on_time_text and "'" in sub_on_time_text: # Player came on
                     number = cells[0].get_text(strip=True)
                     player_name_tag = cells[1].find('a')
-                    player_name = player_name_tag.get_text(strip=True) if player_name_tag else "Unknown Player"
+                    player_name = "Unknown Player"
+                    player_id = "Unknown"
+                    if player_name_tag:
+                        player_name = player_name_tag.get_text(strip=True)
+                        href = player_name_tag.get('href', '')
+                        id_match = re.search(r'/footballer/(\d+)', href)
+                        if id_match:
+                            player_id = id_match.group(1)
+
                     lineups_dict[team_name_key]['substitutes_played'].append({
                         "number": number,
                         "name": player_name,
+                        "id": player_id,
                         "sub_on_at": sub_on_time_text.replace(" '", "'")
                     })
+        
+        # Find Coach (located after the substitutes section)
+        coach_b_tag = subs_section.find_next_sibling('b', string=re.compile(r'Coach', re.IGNORECASE))
+        if coach_b_tag and coach_b_tag.next_sibling:
+            # The name is usually in the next_sibling text node, formatted like '   : Moyes  '
+            coach_text = coach_b_tag.next_sibling
+            if isinstance(coach_text, str):
+                coach_name = coach_text.strip().lstrip(':').strip()
+                if coach_name:
+                        lineups_dict[team_name_key]['coach'] = coach_name
+                        # NOTE: The provided HTML does not contain a link or ID for the coach.
+                        lineups_dict[team_name_key]['coach_id'] = "Unknown"
     else:
-        print(f"Warning: Substitutes section for {team_name_key} not found.")
+        print(f"Warning: Substitutes section for {team_name_key} not found, cannot find coach.")
 
 
 def extract_match_data(html_content):
@@ -153,10 +186,16 @@ def extract_match_data(html_content):
 
     # 5. Referee Name
     data['referee'] = "Unknown"
+    data['referee_id'] = "Unknown"
     if match_info_div:
         referee_link = match_info_div.find('a', href=lambda x: x and '/referee/' in x)
         if referee_link:
             data['referee'] = referee_link.get_text(strip=True)
+            ref_href = referee_link.get('href', '')
+            id_match = re.search(r'/referee/(\d+)', ref_href)
+            if id_match:
+                data['referee_id'] = id_match.group(1)
+
 
     # 6. Who Scored (Goals) - This will now use the updated full team names
     data['goals'] = []
@@ -178,7 +217,7 @@ def extract_match_data(html_content):
                 if "head goal" in goal_type_title: goal_type = "Head"
                 elif "penalty goal" in goal_type_title: goal_type = "Penalty"
 
-                scorer_name, team_scored, assist_by = "Unknown", "Unknown", None
+                scorer_name, scorer_id, team_scored, assist_by, assist_by_id = "Unknown", "Unknown", "Unknown", None, None
                 
                 # Check home scorer cell (index 0) OR away scorer cell (index 4)
                 home_scorer_cell_content = cells[0].get_text(strip=True)
@@ -189,31 +228,53 @@ def extract_match_data(html_content):
                     if home_scorer_link:
                         scorer_name = home_scorer_link.get_text(strip=True)
                         team_scored = data['home_team']
+                        href = home_scorer_link.get('href', '')
+                        id_match = re.search(r'/footballer/(\d+)', href)
+                        if id_match:
+                            scorer_id = id_match.group(1)
+
                         assist_img_home = home_scorer_link.find_next_sibling('img', title='Assist ')
                         if assist_img_home:
                             assist_link_home = assist_img_home.find_next_sibling('a')
-                            if assist_link_home: assist_by = assist_link_home.get_text(strip=True)
-                
+                            if assist_link_home: 
+                                assist_by = assist_link_home.get_text(strip=True)
+                                href = assist_link_home.get('href', '')
+                                id_match = re.search(r'/footballer/(\d+)', href)
+                                if id_match:
+                                    assist_by_id = id_match.group(1)
+
                 elif away_scorer_cell_content: # Content in away scorer column
                     away_scorer_link = cells[4].find('a')
                     if away_scorer_link:
                         scorer_name = away_scorer_link.get_text(strip=True)
                         team_scored = data['away_team']
+                        href = away_scorer_link.get('href', '')
+                        id_match = re.search(r'/footballer/(\d+)', href)
+                        if id_match:
+                            scorer_id = id_match.group(1)
+
                         assist_img_away = away_scorer_link.find_next_sibling('img', title='Assist ')
                         if assist_img_away:
                             assist_link_away = assist_img_away.find_next_sibling('a')
-                            if assist_link_away: assist_by = assist_link_away.get_text(strip=True)
+                            if assist_link_away:
+                                assist_by = assist_link_away.get_text(strip=True)
+                                href = assist_link_away.get('href', '')
+                                id_match = re.search(r'/footballer/(\d+)', href)
+                                if id_match:
+                                    assist_by_id = id_match.group(1)
                 
-                goal_event = {"time": time, "team": team_scored, "scorer": scorer_name, "type": goal_type}
-                if assist_by: goal_event["assisted_by"] = assist_by
+                goal_event = {"time": time, "team": team_scored, "scorer": scorer_name, "scorer_id": scorer_id, "type": goal_type}
+                if assist_by: 
+                    goal_event["assisted_by"] = assist_by
+                    goal_event["assisted_by_id"] = assist_by_id
                 data['goals'].append(goal_event)
     else:
         print("Warning: Match events table not found.")
 
     # 7. Lineups - Initialize with definitive (fuller) team names
     data['lineups'] = {
-        data['home_team']: {"starters": [], "substitutes_played": []},
-        data['away_team']: {"starters": [], "substitutes_played": []}
+        data['home_team']: {"coach": "Unknown", "coach_id": "Unknown", "starters": [], "substitutes_played": []},
+        data['away_team']: {"coach": "Unknown", "coach_id": "Unknown", "starters": [], "substitutes_played": []}
     }
     
     # Parse lineups using the identified H1 tags and full team names
@@ -223,10 +284,13 @@ def extract_match_data(html_content):
     return data
 
 
+
 # --- START OF SCRIPT EXECUTION ---
+
 if __name__ == "__main__":
-    print("Starting data extraction from HTML files...")
+    print(f"{get_current_time()} Starting data extraction from HTML files...")
     path = "data/football_lineups/downloaded_lineup_html_files/"
+    failed_to_extract_match_codes = []
     for filename in glob.glob(os.path.join(path, '*.html')): #only process .JSON files in folder. 
         match_code = filename.split("/")[-1].replace("match_data_", "").replace(".html", "")
         try:
@@ -239,9 +303,14 @@ if __name__ == "__main__":
         extracted_info = extract_match_data(html_file_content)
 
         if extracted_info:
-            with open(f'data/football_lineups/extracted_json_files/extracted_match_data_{match_code}.json', 'w') as f:
-                json.dump(extracted_info, f)
+            new_filename = f'data/football_lineups/extracted_match_json_files/extracted_match_data_{match_code}.json'
+            with open(new_filename, 'w') as f:
+                json.dump(extracted_info, f, indent=4)
             f.close()
-            print(f'Data sucessfully extracted to {filename}')
+            # print(f'{get_current_time()} Data sucessfully extracted to {new_filename}')
         else:
-            print("Failed to extract data.")
+            print(f"{get_current_time()} Failed to extract data.")
+            failed_to_extract_match_codes.append(match_code)
+    if len(failed_to_extract_match_codes) > 0:
+        print('Failed Match Codes:',failed_to_extract_match_codes)    
+    print(f"{get_current_time()} Finished data extraction from HTML files...\n")
